@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="ar" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حاسبة المصروفات - نظام إدارة مصروفات الشحن</title>
+    <meta name="description" content="نظام متكامل لحساب وإدارة مصروفات الشحن البحري مع إمكانية الطباعة والتصدير">
+    <meta name="keywords" content="مصروفات الشحن, حساب المصروفات, إدارة الشحن, طباعة فواتير, Excel">
+    <meta name="author" content="نظام إدارة المصروفات">
+    
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="حاسبة المصروفات - نظام إدارة مصروفات الشحن">
+    <meta property="og:description" content="نظام متكامل لحساب وإدارة مصروفات الشحن البحري مع إمكانية الطباعة والتصدير">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="ar_EG">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="حاسبة المصروفات">
+    <meta name="twitter:description" content="نظام متكامل لحساب وإدارة مصروفات الشحن البحري">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            direction: rtl;
+        }
+        .container-section {
+            padding: 3rem 1rem;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 2.5rem;
+        }
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            transition: all 0.2s ease-in-out;
+            text-align: right;
+        }
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+        }
+        
+        /* Print Styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .invoice-print, .invoice-print * {
+                visibility: visible;
+            }
+            .invoice-print {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white;
+                color: black;
+                font-family: Arial, sans-serif;
+                direction: rtl;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .invoice-header {
+                text-align: center;
+                border-bottom: 2px solid #333;
+                padding-bottom: 20px;
+                margin-bottom: 30px;
+            }
+            .invoice-details {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 30px;
+                margin-bottom: 30px;
+            }
+            .invoice-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 30px;
+            }
+            .invoice-table th,
+            .invoice-table td {
+                border: 1px solid #333;
+                padding: 10px;
+                text-align: right;
+            }
+            .invoice-table th {
+                background-color: #f5f5f5;
+                font-weight: bold;
+            }
+            .invoice-totals {
+                text-align: left;
+                margin-top: 20px;
+            }
+            .total-row {
+                font-weight: bold;
+                font-size: 1.2em;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+    <div class="container-section">
+        <div class="card w-full max-w-4xl mx-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-gray-800">حاسبة المصروفات</h1>
+                <a href="admin.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all text-sm">لوحة الإدارة</a>
+            </div>
+            
+            <!-- Calculator Form -->
+            <form id="calculator-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="clearing-agent-name" class="block text-sm font-medium text-gray-700">اسم المستخلص</label>
+                        <input type="text" id="clearing-agent-name" class="mt-1 form-input" required>
+                    </div>
+                    <div>
+                        <label for="client-name" class="block text-sm font-medium text-gray-700">اسم العميل</label>
+                        <input type="text" id="client-name" class="mt-1 form-input" required>
+                    </div>
+                    <div>
+                        <label for="item-type" class="block text-sm font-medium text-gray-700">الصنف</label>
+                        <input type="text" id="item-type" class="mt-1 form-input" required>
+                    </div>
+                    <div>
+                        <label for="bill-number" class="block text-sm font-medium text-gray-700">رقم البوليصة</label>
+                        <input type="text" id="bill-number" class="mt-1 form-input" required>
+                    </div>
+                    <div>
+                        <label for="shipping-agency" class="block text-sm font-medium text-gray-700">التوكيل الملاحي</label>
+                        <select id="shipping-agency" class="mt-1 form-select" required>
+                            <option value="">اختر توكيل</option>
+                            <option value="MSC">MSC</option>
+                            <option value="CMA">CMA</option>
+                            <option value="Maersk">Maersk</option>
+                            <option value="ONE">ONE</option>
+                            <option value="Hapag-Lloyd">Hapag-Lloyd</option>
+                            <option value="Other">آخر</option>
+                        </select>
+                    </div>
+                    <div id="other-shipping-agency-container" class="hidden">
+                        <label for="other-shipping-agency" class="block text-sm font-medium text-gray-700">اكتب اسم التوكيل الآخر</label>
+                        <input type="text" id="other-shipping-agency" class="mt-1 form-input">
+                    </div>
+                    <div>
+                        <label for="transaction-date" class="block text-sm font-medium text-gray-700">التاريخ</label>
+                        <input type="date" id="transaction-date" class="mt-1 form-input" required>
+                    </div>
+                </div>
+
+                <div class="border rounded-xl p-4 mt-4">
+                    <h3 class="text-xl font-semibold mb-3">المصروفات</h3>
+                    <div id="expenses-container" class="space-y-3">
+                        <div class="flex items-center space-x-2 space-x-reverse expense-entry">
+                            <input type="number" placeholder="المبلغ" class="form-input flex-1 expense-amount" required>
+                            <input type="text" placeholder="البيان" class="form-input flex-1 expense-note" required>
+                            <button type="button" class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg remove-expense-btn">حذف</button>
+                        </div>
+                    </div>
+                    <button type="button" id="add-expense-btn" class="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-xl transition-all w-full">إضافة مصروف آخر</button>
+                </div>
+                
+                <div>
+                    <label for="total-balance" class="block text-sm font-medium text-gray-700">إجمالي الرصيد المقدم</label>
+                    <input type="number" id="total-balance" class="mt-1 form-input" placeholder="0.00" required>
+                </div>
+
+                <div class="flex space-x-4 space-x-reverse">
+                    <button type="submit" id="submit-btn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-xl transition-all">حفظ الشحنة</button>
+                    <button type="button" id="cancel-edit-btn" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 rounded-xl transition-all hidden" onclick="cancelEdit()">إلغاء التعديل</button>
+                </div>
+            </form>
+
+            <hr class="my-8 border-t border-gray-300">
+
+            <!-- Summary and Transactions -->
+            <div class="space-y-6">
+                <div class="flex justify-between items-center mb-4">
+                    <p class="text-lg font-medium">إجمالي المصروفات: <span id="total-expenses" class="font-bold text-red-600">0</span> جنيه</p>
+                    <p class="text-lg font-medium">الباقي من الرصيد: <span id="remaining-balance" class="font-bold text-green-600">0</span> جنيه</p>
+                    <div class="flex space-x-2 space-x-reverse">
+                        <button id="export-btn" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-xl transition-all">تصدير إلى Excel</button>
+                        <button id="backup-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl transition-all">نسخ احتياطي</button>
+                        <button id="restore-btn" class="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-xl transition-all">استعادة البيانات</button>
+                    </div>
+                </div>
+                
+                <!-- Data Management Section -->
+                <div class="bg-gray-50 rounded-xl p-4 mb-6">
+                    <h3 class="text-lg font-semibold mb-3">إدارة البيانات</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-700 mb-2">📊 إحصائيات البيانات</h4>
+                            <p class="text-sm text-gray-600">عدد المعاملات: <span id="transactions-count">0</span></p>
+                            <p class="text-sm text-gray-600">آخر تحديث: <span id="last-update">-</span></p>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg">
+                            <h4 class="font-medium text-gray-700 mb-2">💾 خيارات النسخ الاحتياطي</h4>
+                            <p class="text-sm text-gray-600">حجم البيانات: <span id="data-size">0 KB</span></p>
+                            <p class="text-sm text-gray-600">مكان التخزين: Local Storage</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="transactions-list" class="space-y-4 max-h-96 overflow-y-auto">
+                    <!-- Transactions will be displayed here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const calculatorForm = document.getElementById('calculator-form');
+            const transactionsList = document.getElementById('transactions-list');
+            const totalExpensesDisplay = document.getElementById('total-expenses');
+            const remainingBalanceDisplay = document.getElementById('remaining-balance');
+            const exportBtn = document.getElementById('export-btn');
+            const backupBtn = document.getElementById('backup-btn');
+            const restoreBtn = document.getElementById('restore-btn');
+            const shippingAgencySelect = document.getElementById('shipping-agency');
+            const otherShippingAgencyContainer = document.getElementById('other-shipping-agency-container');
+            const addExpenseBtn = document.getElementById('add-expense-btn');
+            const expensesContainer = document.getElementById('expenses-container');
+
+            let transactions = [];
+            let editingTransactionId = null;
+
+            // Load data from local storage on page load
+            const storedTransactions = localStorage.getItem('ilc_transactions');
+            if (storedTransactions) {
+                transactions = JSON.parse(storedTransactions);
+                updateUI();
+            }
+
+            // Show/hide other shipping agency input
+            shippingAgencySelect.addEventListener('change', (e) => {
+                if (e.target.value === 'Other') {
+                    otherShippingAgencyContainer.classList.remove('hidden');
+                    document.getElementById('other-shipping-agency').setAttribute('required', 'required');
+                } else {
+                    otherShippingAgencyContainer.classList.add('hidden');
+                    document.getElementById('other-shipping-agency').removeAttribute('required');
+                }
+            });
+
+            // Add new expense input fields
+            addExpenseBtn.addEventListener('click', () => {
+                const newExpenseEntry = document.createElement('div');
+                newExpenseEntry.className = "flex items-center space-x-2 space-x-reverse expense-entry";
+                newExpenseEntry.innerHTML = `
+                    <input type="number" placeholder="المبلغ" class="form-input flex-1 expense-amount" required>
+                    <input type="text" placeholder="البيان" class="form-input flex-1 expense-note" required>
+                    <button type="button" class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg remove-expense-btn">حذف</button>
+                `;
+                expensesContainer.appendChild(newExpenseEntry);
+            });
+
+            // Remove expense input fields
+            expensesContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-expense-btn')) {
+                    e.target.closest('.expense-entry').remove();
+                }
+            });
+
+            // Handle form submission
+            calculatorForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const clearingAgentName = document.getElementById('clearing-agent-name').value;
+                const clientName = document.getElementById('client-name').value;
+                const itemType = document.getElementById('item-type').value;
+                const billNumber = document.getElementById('bill-number').value;
+                const shippingAgency = shippingAgencySelect.value === 'Other' ? document.getElementById('other-shipping-agency').value : shippingAgencySelect.value;
+                const date = document.getElementById('transaction-date').value;
+                const totalBalance = parseFloat(document.getElementById('total-balance').value);
+
+                const expenses = [];
+                let totalExpenses = 0;
+                document.querySelectorAll('.expense-entry').forEach(entry => {
+                    const amount = parseFloat(entry.querySelector('.expense-amount').value);
+                    const note = entry.querySelector('.expense-note').value;
+                    if (!isNaN(amount) && note) {
+                        expenses.push({ amount, note });
+                        totalExpenses += amount;
+                    }
+                });
+                
+                // Simple validation
+                if (!clearingAgentName || !clientName || !itemType || !billNumber || !shippingAgency || !date || isNaN(totalBalance) || expenses.length === 0) {
+                    return;
+                }
+
+                const transactionData = {
+                    clearingAgentName,
+                    clientName,
+                    itemType,
+                    billNumber,
+                    shippingAgency,
+                    date,
+                    expenses,
+                    totalExpenses,
+                    totalBalance,
+                    createdAt: editingTransactionId || new Date().toISOString()
+                };
+
+                if (editingTransactionId) {
+                    // Update existing transaction
+                    const index = transactions.findIndex(t => t.createdAt === editingTransactionId);
+                    if (index !== -1) {
+                        transactions[index] = transactionData;
+                        alert('تم تحديث المعاملة بنجاح!');
+                    }
+                    editingTransactionId = null;
+                    document.getElementById('submit-btn').textContent = 'حفظ الشحنة';
+                } else {
+                    // Add new transaction
+                    transactions.push(transactionData);
+                    alert('تم حفظ المعاملة بنجاح!');
+                }
+                
+                localStorage.setItem('ilc_transactions', JSON.stringify(transactions));
+                calculatorForm.reset();
+                updateUI();
+            });
+
+            // Update the display with current transactions
+            function updateUI() {
+                let totalExpenses = 0;
+                let remainingBalance = 0;
+                let lastTotalBalance = 0;
+
+                transactionsList.innerHTML = '';
+                transactions.forEach(transaction => {
+                    totalExpenses += transaction.totalExpenses;
+                    lastTotalBalance = transaction.totalBalance;
+
+                    const transactionDiv = document.createElement('div');
+                    transactionDiv.className = "p-4 bg-gray-50 rounded-xl mb-2";
+                    transactionDiv.innerHTML = `
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="font-semibold">العميل: ${transaction.clientName}</p>
+                            <div class="flex space-x-2 space-x-reverse">
+                                <button onclick="printInvoice('${transaction.createdAt}')" class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-md">طباعة</button>
+                                <button onclick="editTransaction('${transaction.createdAt}')" class="bg-yellow-500 hover:bg-yellow-600 text-white py-1 px-3 rounded-md">تعديل</button>
+                                <button onclick="removeTransaction('${transaction.createdAt}')" class="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-md">حذف</button>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600">المستخلص: ${transaction.clearingAgentName}</p>
+                        <p class="text-sm text-gray-600">البوليصة: ${transaction.billNumber}</p>
+                        <p class="text-sm text-gray-600">التوكيل: ${transaction.shippingAgency}</p>
+                        <p class="font-bold text-lg mt-2 text-red-600">إجمالي المصروفات: ${transaction.totalExpenses.toLocaleString('en-US')} جنيه</p>
+                        <div class="border-t border-gray-300 mt-2 pt-2">
+                            ${transaction.expenses.map(exp => `<p class="text-xs text-gray-500">- ${exp.note}: ${exp.amount.toLocaleString('en-US')} جنيه</p>`).join('')}
+                        </div>
+                    `;
+                    transactionsList.appendChild(transactionDiv);
+                });
+
+                remainingBalance = lastTotalBalance - totalExpenses;
+
+                totalExpensesDisplay.textContent = totalExpenses.toLocaleString('en-US');
+                remainingBalanceDisplay.textContent = remainingBalance.toLocaleString('en-US');
+                
+                // Update data statistics
+                updateDataStats();
+            }
+            
+            // Function to remove a transaction
+            window.removeTransaction = (createdAt) => {
+                if (confirm('هل أنت متأكد من حذف هذه المعاملة؟')) {
+                    transactions = transactions.filter(t => t.createdAt !== createdAt);
+                    localStorage.setItem('ilc_transactions', JSON.stringify(transactions));
+                    updateUI();
+                }
+            };
+
+            // Function to edit a transaction
+            window.editTransaction = (createdAt) => {
+                const transaction = transactions.find(t => t.createdAt === createdAt);
+                if (!transaction) return;
+
+                // Set editing mode
+                editingTransactionId = createdAt;
+                document.getElementById('submit-btn').textContent = 'تحديث المعاملة';
+
+                // Fill form with existing data
+                document.getElementById('clearing-agent-name').value = transaction.clearingAgentName;
+                document.getElementById('client-name').value = transaction.clientName;
+                document.getElementById('item-type').value = transaction.itemType;
+                document.getElementById('bill-number').value = transaction.billNumber;
+                document.getElementById('transaction-date').value = transaction.date;
+                document.getElementById('total-balance').value = transaction.totalBalance;
+
+                // Set shipping agency
+                const shippingAgencySelect = document.getElementById('shipping-agency');
+                if (['MSC', 'CMA', 'Maersk', 'ONE', 'Hapag-Lloyd'].includes(transaction.shippingAgency)) {
+                    shippingAgencySelect.value = transaction.shippingAgency;
+                } else {
+                    shippingAgencySelect.value = 'Other';
+                    document.getElementById('other-shipping-agency').value = transaction.shippingAgency;
+                    otherShippingAgencyContainer.classList.remove('hidden');
+                }
+
+                // Clear existing expenses and add current ones
+                expensesContainer.innerHTML = '';
+                transaction.expenses.forEach((expense, index) => {
+                    const expenseEntry = document.createElement('div');
+                    expenseEntry.className = "flex items-center space-x-2 space-x-reverse expense-entry";
+                    expenseEntry.innerHTML = `
+                        <input type="number" placeholder="المبلغ" class="form-input flex-1 expense-amount" value="${expense.amount}" required>
+                        <input type="text" placeholder="البيان" class="form-input flex-1 expense-note" value="${expense.note}" required>
+                        <button type="button" class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg remove-expense-btn">حذف</button>
+                    `;
+                    expensesContainer.appendChild(expenseEntry);
+                });
+
+                // Show cancel button and scroll to form
+                document.getElementById('cancel-edit-btn').classList.remove('hidden');
+                document.getElementById('calculator-form').scrollIntoView({ behavior: 'smooth' });
+            };
+
+            // Function to cancel edit
+            window.cancelEdit = () => {
+                editingTransactionId = null;
+                document.getElementById('submit-btn').textContent = 'حفظ الشحنة';
+                document.getElementById('cancel-edit-btn').classList.add('hidden');
+                calculatorForm.reset();
+                
+                // Clear expenses container and add one empty entry
+                expensesContainer.innerHTML = `
+                    <div class="flex items-center space-x-2 space-x-reverse expense-entry">
+                        <input type="number" placeholder="المبلغ" class="form-input flex-1 expense-amount" required>
+                        <input type="text" placeholder="البيان" class="form-input flex-1 expense-note" required>
+                        <button type="button" class="bg-red-500 hover:bg-red-600 text-white p-2 rounded-lg remove-expense-btn">حذف</button>
+                    </div>
+                `;
+            };
+
+            // Function to print invoice
+            window.printInvoice = (createdAt) => {
+                const transaction = transactions.find(t => t.createdAt === createdAt);
+                if (!transaction) return;
+
+                // Create invoice HTML
+                const invoiceHTML = `
+                    <div class="invoice-print">
+                        <div class="invoice-header">
+                            <h1>فاتورة مصروفات الشحن</h1>
+                            <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
+                        </div>
+                        
+                        <div class="invoice-details">
+                            <div>
+                                <h3>بيانات العميل</h3>
+                                <p><strong>اسم العميل:</strong> ${transaction.clientName}</p>
+                                <p><strong>اسم المستخلص:</strong> ${transaction.clearingAgentName}</p>
+                                <p><strong>الصنف:</strong> ${transaction.itemType}</p>
+                            </div>
+                            <div>
+                                <h3>بيانات الشحنة</h3>
+                                <p><strong>رقم البوليصة:</strong> ${transaction.billNumber}</p>
+                                <p><strong>التوكيل الملاحي:</strong> ${transaction.shippingAgency}</p>
+                                <p><strong>تاريخ المعاملة:</strong> ${new Date(transaction.date).toLocaleDateString('ar-EG')}</p>
+                            </div>
+                        </div>
+
+                        <table class="invoice-table">
+                            <thead>
+                                <tr>
+                                    <th>م</th>
+                                    <th>البيان</th>
+                                    <th>المبلغ (جنيه)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${transaction.expenses.map((expense, index) => `
+                                    <tr>
+                                        <td>${index + 1}</td>
+                                        <td>${expense.note}</td>
+                                        <td>${expense.amount.toLocaleString('en-US')}</td>
+                                    </tr>
+                                `).join('')}
+                                <tr class="total-row">
+                                    <td colspan="2">إجمالي المصروفات</td>
+                                    <td>${transaction.totalExpenses.toLocaleString('en-US')} جنيه</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="2">إجمالي الرصيد المقدم</td>
+                                    <td>${transaction.totalBalance.toLocaleString('en-US')} جنيه</td>
+                                </tr>
+                                <tr class="total-row">
+                                    <td colspan="2">الباقي من الرصيد</td>
+                                    <td>${(transaction.totalBalance - transaction.totalExpenses).toLocaleString('en-US')} جنيه</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="invoice-totals">
+                            <p><strong>ملاحظات:</strong></p>
+                            <p>- هذه الفاتورة تم إنشاؤها تلقائياً من نظام إدارة المصروفات</p>
+                            <p>- جميع المبالغ بالجنيه المصري</p>
+                        </div>
+                    </div>
+                `;
+
+                // Create a temporary container for the invoice
+                const printContainer = document.createElement('div');
+                printContainer.innerHTML = invoiceHTML;
+                document.body.appendChild(printContainer);
+
+                // Print the invoice
+                window.print();
+
+                // Remove the temporary container after printing
+                setTimeout(() => {
+                    document.body.removeChild(printContainer);
+                }, 1000);
+            };
+
+            // Update data statistics
+            function updateDataStats() {
+                const transactionsCount = document.getElementById('transactions-count');
+                const lastUpdate = document.getElementById('last-update');
+                const dataSize = document.getElementById('data-size');
+                
+                transactionsCount.textContent = transactions.length;
+                
+                if (transactions.length > 0) {
+                    const latestTransaction = transactions.reduce((latest, current) => 
+                        new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest
+                    );
+                    lastUpdate.textContent = new Date(latestTransaction.createdAt).toLocaleDateString('ar-EG');
+                } else {
+                    lastUpdate.textContent = 'لا توجد بيانات';
+                }
+                
+                // Calculate data size
+                const dataString = JSON.stringify(transactions);
+                const sizeInBytes = new Blob([dataString]).size;
+                const sizeInKB = (sizeInBytes / 1024).toFixed(2);
+                dataSize.textContent = `${sizeInKB} KB`;
+            }
+
+            // Backup data function
+            backupBtn.addEventListener('click', () => {
+                if (transactions.length === 0) {
+                    alert('لا توجد بيانات لنسخها احتياطياً.');
+                    return;
+                }
+
+                const backupData = {
+                    transactions: transactions,
+                    backupDate: new Date().toISOString(),
+                    version: '1.0',
+                    totalTransactions: transactions.length
+                };
+
+                const dataStr = JSON.stringify(backupData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `expenses-backup-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                alert('تم إنشاء النسخة الاحتياطية بنجاح!');
+            });
+
+            // Restore data function
+            restoreBtn.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const backupData = JSON.parse(e.target.result);
+                            
+                            if (!backupData.transactions || !Array.isArray(backupData.transactions)) {
+                                alert('ملف النسخة الاحتياطية غير صحيح.');
+                                return;
+                            }
+                            
+                            if (confirm(`هل تريد استعادة ${backupData.totalTransactions} معاملة؟\nسيتم استبدال البيانات الحالية.`)) {
+                                transactions = backupData.transactions;
+                                localStorage.setItem('ilc_transactions', JSON.stringify(transactions));
+                                updateUI();
+                                alert('تم استعادة البيانات بنجاح!');
+                            }
+                        } catch (error) {
+                            alert('خطأ في قراءة ملف النسخة الاحتياطية.');
+                            console.error('Restore error:', error);
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                
+                input.click();
+            });
+
+            // Export to CSV
+            exportBtn.addEventListener('click', () => {
+                if (transactions.length === 0) {
+                    alert('لا توجد بيانات لتصديرها.');
+                    return;
+                }
+
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+                
+                const headers = [
+                    'اسم المستخلص', 'اسم العميل', 'الصنف', 'رقم البوليصة',
+                    'التوكيل الملاحي', 'التاريخ', 'إجمالي المصروفات (جنيه)',
+                    'إجمالي الرصيد المقدم', 'باقي الرصيد من الشحنة (جنيه)',
+                    'المصروفات التفصيلية'
+                ];
+                csvContent += headers.join(',') + '\n';
+
+                let totalAllExpenses = 0;
+                let totalAllBalance = 0;
+                
+                transactions.forEach(transaction => {
+                    const detailedExpenses = transaction.expenses.map(exp => `${exp.note}: ${exp.amount} جنيه`).join(' | ');
+                    const remainingBalance = transaction.totalBalance - transaction.totalExpenses;
+                    
+                    totalAllExpenses += transaction.totalExpenses;
+                    totalAllBalance += transaction.totalBalance;
+                    
+                    const row = [
+                        `"${transaction.clearingAgentName}"`, `"${transaction.clientName}"`, `"${transaction.itemType}"`, `"${transaction.billNumber}"`,
+                        `"${transaction.shippingAgency}"`, `"${new Date(transaction.date).toLocaleDateString()}"`, transaction.totalExpenses,
+                        transaction.totalBalance, remainingBalance, `"${detailedExpenses}"`
+                    ];
+                    csvContent += row.join(',') + '\n';
+                });
+                
+                // Add totals row
+                const totalRemainingBalance = totalAllBalance - totalAllExpenses;
+                const totalsRow = [
+                    'المجاميع الكلية', '', '', '', '', '',
+                    totalAllExpenses, totalAllBalance, totalRemainingBalance, ''
+                ];
+                csvContent += totalsRow.join(',') + '\n';
+                
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "transactions.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        });
+    </script>
+</body>
+</html>

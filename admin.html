@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="ar" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الإدارة - حاسبة المصروفات</title>
+    <meta name="description" content="لوحة إدارة لعرض وتتبع جميع المعاملات المقدمة من المستخدمين">
+    <meta name="author" content="نظام إدارة المصروفات">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js for analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+            direction: rtl;
+        }
+        .container-section {
+            padding: 2rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .stats-card.success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        .stats-card.warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .stats-card.info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        .transaction-item {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .transaction-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1);
+            border-left-color: #4f46e5;
+        }
+        .filter-btn {
+            transition: all 0.2s ease;
+        }
+        .filter-btn.active {
+            background-color: #4f46e5;
+            color: white;
+        }
+        .search-input {
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            padding: 0.5rem 1rem;
+            width: 100%;
+            transition: all 0.2s ease;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container-section">
+        <!-- Header -->
+        <div class="card">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold text-gray-800">لوحة الإدارة - حاسبة المصروفات</h1>
+                <div class="flex space-x-2 space-x-reverse">
+                    <a href="index.html" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all">العودة للتطبيق</a>
+                    <button onclick="exportAllData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-all">تصدير جميع البيانات</button>
+                    <button onclick="window.print()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-all no-print">طباعة التقرير</button>
+                </div>
+            </div>
+            <p class="text-gray-600">مرحباً بك في لوحة الإدارة - هنا يمكنك عرض وتتبع جميع المعاملات المقدمة من المستخدمين</p>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="card stats-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-90">إجمالي المعاملات</p>
+                        <p class="text-2xl font-bold" id="total-transactions">0</p>
+                    </div>
+                    <div class="text-3xl opacity-80">📊</div>
+                </div>
+            </div>
+            
+            <div class="card stats-card success">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-90">إجمالي المصروفات</p>
+                        <p class="text-2xl font-bold" id="total-expenses">0</p>
+                    </div>
+                    <div class="text-3xl opacity-80">💰</div>
+                </div>
+            </div>
+            
+            <div class="card stats-card warning">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-90">إجمالي الرصيد</p>
+                        <p class="text-2xl font-bold" id="total-balance">0</p>
+                    </div>
+                    <div class="text-3xl opacity-80">🏦</div>
+                </div>
+            </div>
+            
+            <div class="card stats-card info">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm opacity-90">متوسط المعاملة</p>
+                        <p class="text-2xl font-bold" id="average-transaction">0</p>
+                    </div>
+                    <div class="text-3xl opacity-80">📈</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="card">
+            <h3 class="text-lg font-semibold mb-4">فلترة وبحث المعاملات</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">البحث في البيانات</label>
+                    <input type="text" id="search-input" class="search-input" placeholder="ابحث عن العميل، المستخلص، أو رقم البوليصة...">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">فلترة حسب التوكيل</label>
+                    <select id="shipping-agency-filter" class="search-input">
+                        <option value="">جميع التوكيلات</option>
+                        <option value="MSC">MSC</option>
+                        <option value="CMA">CMA</option>
+                        <option value="Maersk">Maersk</option>
+                        <option value="ONE">ONE</option>
+                        <option value="Hapag-Lloyd">Hapag-Lloyd</option>
+                        <option value="Other">آخر</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">فلترة حسب التاريخ</label>
+                    <select id="date-filter" class="search-input">
+                        <option value="">جميع التواريخ</option>
+                        <option value="today">اليوم</option>
+                        <option value="week">هذا الأسبوع</option>
+                        <option value="month">هذا الشهر</option>
+                        <option value="year">هذا العام</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mt-4 flex flex-wrap gap-2">
+                <button class="filter-btn active px-4 py-2 rounded-lg border" data-filter="all">الكل</button>
+                <button class="filter-btn px-4 py-2 rounded-lg border" data-filter="high-value">قيمة عالية</button>
+                <button class="filter-btn px-4 py-2 rounded-lg border" data-filter="recent">الأحدث</button>
+                <button class="filter-btn px-4 py-2 rounded-lg border" data-filter="oldest">الأقدم</button>
+            </div>
+        </div>
+
+        <!-- Analytics Chart -->
+        <div class="card">
+            <h3 class="text-lg font-semibold mb-4">تحليل المصروفات عبر الوقت</h3>
+            <div class="h-64">
+                <canvas id="expensesChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Transactions List -->
+        <div class="card">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">قائمة المعاملات</h3>
+                <div class="text-sm text-gray-600">
+                    عرض <span id="displayed-count">0</span> من <span id="total-count">0</span> معاملة
+                </div>
+            </div>
+            
+            <div id="transactions-container" class="space-y-4">
+                <!-- Transactions will be loaded here -->
+            </div>
+            
+            <div id="no-data-message" class="text-center py-8 text-gray-500 hidden">
+                <div class="text-4xl mb-4">📭</div>
+                <p>لا توجد معاملات متاحة للعرض</p>
+                <p class="text-sm mt-2">تأكد من أن المستخدمين قد قاموا بإدخال بياناتهم</p>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div class="card no-print">
+            <div class="flex justify-center items-center space-x-2 space-x-reverse">
+                <button id="prev-page" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg disabled:opacity-50" disabled>السابق</button>
+                <span id="page-info" class="px-4 py-2 text-gray-600">صفحة 1 من 1</span>
+                <button id="next-page" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg disabled:opacity-50" disabled>التالي</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allTransactions = [];
+        let filteredTransactions = [];
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let expensesChart = null;
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTransactions();
+            setupEventListeners();
+            initializeChart();
+        });
+
+        function loadTransactions() {
+            // Try to load from localStorage first
+            const storedTransactions = localStorage.getItem('ilc_transactions');
+            if (storedTransactions) {
+                allTransactions = JSON.parse(storedTransactions);
+                updateStatistics();
+                applyFilters();
+                return;
+            }
+
+            // If no local data, try to load from a data service
+            // This would be implemented based on your chosen data storage solution
+            loadFromDataService();
+        }
+
+        async function loadFromDataService() {
+            // This is a placeholder for loading data from a service like:
+            // - Netlify Forms
+            // - Airtable
+            // - Google Sheets
+            // - Firebase
+            // - Custom API
+            
+            try {
+                // Example: Load from Netlify Forms (if you set up form submissions)
+                const response = await fetch('/.netlify/functions/getTransactions');
+                if (response.ok) {
+                    const data = await response.json();
+                    allTransactions = data.transactions || [];
+                }
+            } catch (error) {
+                console.log('No external data service available, using local storage only');
+            }
+            
+            updateStatistics();
+            applyFilters();
+        }
+
+        function setupEventListeners() {
+            // Search input
+            document.getElementById('search-input').addEventListener('input', applyFilters);
+            
+            // Filter dropdowns
+            document.getElementById('shipping-agency-filter').addEventListener('change', applyFilters);
+            document.getElementById('date-filter').addEventListener('change', applyFilters);
+            
+            // Filter buttons
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+                    applyFilters();
+                });
+            });
+            
+            // Pagination
+            document.getElementById('prev-page').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    displayTransactions();
+                }
+            });
+            
+            document.getElementById('next-page').addEventListener('click', () => {
+                const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayTransactions();
+                }
+            });
+        }
+
+        function applyFilters() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const shippingAgencyFilter = document.getElementById('shipping-agency-filter').value;
+            const dateFilter = document.getElementById('date-filter').value;
+            const activeFilter = document.querySelector('.filter-btn.active').dataset.filter;
+            
+            filteredTransactions = allTransactions.filter(transaction => {
+                // Search filter
+                if (searchTerm) {
+                    const searchableText = [
+                        transaction.clearingAgentName,
+                        transaction.clientName,
+                        transaction.billNumber,
+                        transaction.shippingAgency,
+                        transaction.itemType
+                    ].join(' ').toLowerCase();
+                    
+                    if (!searchableText.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+                
+                // Shipping agency filter
+                if (shippingAgencyFilter && transaction.shippingAgency !== shippingAgencyFilter) {
+                    return false;
+                }
+                
+                // Date filter
+                if (dateFilter) {
+                    const transactionDate = new Date(transaction.date);
+                    const now = new Date();
+                    
+                    switch (dateFilter) {
+                        case 'today':
+                            if (transactionDate.toDateString() !== now.toDateString()) return false;
+                            break;
+                        case 'week':
+                            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                            if (transactionDate < weekAgo) return false;
+                            break;
+                        case 'month':
+                            const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                            if (transactionDate < monthAgo) return false;
+                            break;
+                        case 'year':
+                            const yearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+                            if (transactionDate < yearAgo) return false;
+                            break;
+                    }
+                }
+                
+                // Active filter
+                switch (activeFilter) {
+                    case 'high-value':
+                        return transaction.totalExpenses > 10000; // High value threshold
+                    case 'recent':
+                        return new Date(transaction.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                    case 'oldest':
+                        return new Date(transaction.createdAt) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+                }
+                
+                return true;
+            });
+            
+            currentPage = 1;
+            displayTransactions();
+            updateChart();
+        }
+
+        function displayTransactions() {
+            const container = document.getElementById('transactions-container');
+            const noDataMessage = document.getElementById('no-data-message');
+            
+            if (filteredTransactions.length === 0) {
+                container.innerHTML = '';
+                noDataMessage.classList.remove('hidden');
+                updatePagination();
+                return;
+            }
+            
+            noDataMessage.classList.add('hidden');
+            
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageTransactions = filteredTransactions.slice(startIndex, endIndex);
+            
+            container.innerHTML = pageTransactions.map(transaction => `
+                <div class="transaction-item bg-gray-50 rounded-lg p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <h4 class="font-semibold text-lg">${transaction.clientName}</h4>
+                            <p class="text-sm text-gray-600">المستخلص: ${transaction.clearingAgentName}</p>
+                            <p class="text-sm text-gray-600">البوليصة: ${transaction.billNumber}</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">التوكيل: ${transaction.shippingAgency}</p>
+                            <p class="text-sm text-gray-600">الصنف: ${transaction.itemType}</p>
+                            <p class="text-sm text-gray-600">التاريخ: ${new Date(transaction.date).toLocaleDateString('ar-EG')}</p>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-lg font-bold text-red-600">${transaction.totalExpenses.toLocaleString('en-US')} جنيه</p>
+                            <p class="text-sm text-gray-600">الرصيد: ${transaction.totalBalance.toLocaleString('en-US')} جنيه</p>
+                            <p class="text-sm text-green-600">الباقي: ${(transaction.totalBalance - transaction.totalExpenses).toLocaleString('en-US')} جنيه</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 pt-3 border-t border-gray-200">
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="viewTransactionDetails('${transaction.createdAt}')" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">عرض التفاصيل</button>
+                            <button onclick="printTransaction('${transaction.createdAt}')" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm">طباعة</button>
+                            <button onclick="exportTransaction('${transaction.createdAt}')" class="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-sm">تصدير</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            updatePagination();
+        }
+
+        function updatePagination() {
+            const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+            
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages || totalPages === 0;
+            
+            pageInfo.textContent = `صفحة ${currentPage} من ${totalPages}`;
+            
+            document.getElementById('displayed-count').textContent = Math.min((currentPage - 1) * itemsPerPage + 1, filteredTransactions.length);
+            document.getElementById('total-count').textContent = filteredTransactions.length;
+        }
+
+        function updateStatistics() {
+            const totalTransactions = allTransactions.length;
+            const totalExpenses = allTransactions.reduce((sum, t) => sum + t.totalExpenses, 0);
+            const totalBalance = allTransactions.reduce((sum, t) => sum + t.totalBalance, 0);
+            const averageTransaction = totalTransactions > 0 ? totalExpenses / totalTransactions : 0;
+            
+            document.getElementById('total-transactions').textContent = totalTransactions.toLocaleString('en-US');
+            document.getElementById('total-expenses').textContent = totalExpenses.toLocaleString('en-US');
+            document.getElementById('total-balance').textContent = totalBalance.toLocaleString('en-US');
+            document.getElementById('average-transaction').textContent = Math.round(averageTransaction).toLocaleString('en-US');
+        }
+
+        function initializeChart() {
+            const ctx = document.getElementById('expensesChart').getContext('2d');
+            expensesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'المصروفات اليومية',
+                        data: [],
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toLocaleString('en-US') + ' جنيه';
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: {
+                                    family: 'Inter'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            updateChart();
+        }
+
+        function updateChart() {
+            if (!expensesChart) return;
+            
+            // Group transactions by date
+            const dailyData = {};
+            filteredTransactions.forEach(transaction => {
+                const date = new Date(transaction.date).toLocaleDateString('ar-EG');
+                if (!dailyData[date]) {
+                    dailyData[date] = 0;
+                }
+                dailyData[date] += transaction.totalExpenses;
+            });
+            
+            const sortedDates = Object.keys(dailyData).sort((a, b) => new Date(a) - new Date(b));
+            
+            expensesChart.data.labels = sortedDates;
+            expensesChart.data.datasets[0].data = sortedDates.map(date => dailyData[date]);
+            expensesChart.update();
+        }
+
+        // Action functions
+        function viewTransactionDetails(transactionId) {
+            const transaction = allTransactions.find(t => t.createdAt === transactionId);
+            if (!transaction) return;
+            
+            const details = `
+                تفاصيل المعاملة:
+                
+                العميل: ${transaction.clientName}
+                المستخلص: ${transaction.clearingAgentName}
+                الصنف: ${transaction.itemType}
+                رقم البوليصة: ${transaction.billNumber}
+                التوكيل الملاحي: ${transaction.shippingAgency}
+                التاريخ: ${new Date(transaction.date).toLocaleDateString('ar-EG')}
+                
+                المصروفات:
+                ${transaction.expenses.map(exp => `- ${exp.note}: ${exp.amount.toLocaleString('en-US')} جنيه`).join('\n')}
+                
+                إجمالي المصروفات: ${transaction.totalExpenses.toLocaleString('en-US')} جنيه
+                إجمالي الرصيد: ${transaction.totalBalance.toLocaleString('en-US')} جنيه
+                الباقي: ${(transaction.totalBalance - transaction.totalExpenses).toLocaleString('en-US')} جنيه
+            `;
+            
+            alert(details);
+        }
+
+        function printTransaction(transactionId) {
+            const transaction = allTransactions.find(t => t.createdAt === transactionId);
+            if (!transaction) return;
+            
+            // Create a new window for printing
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>فاتورة ${transaction.clientName}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; direction: rtl; margin: 20px; }
+                        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+                        .details { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                        th, td { border: 1px solid #333; padding: 10px; text-align: right; }
+                        th { background-color: #f5f5f5; font-weight: bold; }
+                        .total-row { font-weight: bold; font-size: 1.2em; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>فاتورة مصروفات الشحن</h1>
+                        <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
+                    </div>
+                    
+                    <div class="details">
+                        <div>
+                            <h3>بيانات العميل</h3>
+                            <p><strong>اسم العميل:</strong> ${transaction.clientName}</p>
+                            <p><strong>اسم المستخلص:</strong> ${transaction.clearingAgentName}</p>
+                            <p><strong>الصنف:</strong> ${transaction.itemType}</p>
+                        </div>
+                        <div>
+                            <h3>بيانات الشحنة</h3>
+                            <p><strong>رقم البوليصة:</strong> ${transaction.billNumber}</p>
+                            <p><strong>التوكيل الملاحي:</strong> ${transaction.shippingAgency}</p>
+                            <p><strong>تاريخ المعاملة:</strong> ${new Date(transaction.date).toLocaleDateString('ar-EG')}</p>
+                        </div>
+                    </div>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>م</th>
+                                <th>البيان</th>
+                                <th>المبلغ (جنيه)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${transaction.expenses.map((expense, index) => `
+                                <tr>
+                                    <td>${index + 1}</td>
+                                    <td>${expense.note}</td>
+                                    <td>${expense.amount.toLocaleString('en-US')}</td>
+                                </tr>
+                            `).join('')}
+                            <tr class="total-row">
+                                <td colspan="2">إجمالي المصروفات</td>
+                                <td>${transaction.totalExpenses.toLocaleString('en-US')} جنيه</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2">إجمالي الرصيد المقدم</td>
+                                <td>${transaction.totalBalance.toLocaleString('en-US')} جنيه</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td colspan="2">الباقي من الرصيد</td>
+                                <td>${(transaction.totalBalance - transaction.totalExpenses).toLocaleString('en-US')} جنيه</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        function exportTransaction(transactionId) {
+            const transaction = allTransactions.find(t => t.createdAt === transactionId);
+            if (!transaction) return;
+            
+            const csvContent = `data:text/csv;charset=utf-8,\uFEFF"اسم العميل","اسم المستخلص","الصنف","رقم البوليصة","التوكيل الملاحي","التاريخ","إجمالي المصروفات","إجمالي الرصيد","الباقي","المصروفات التفصيلية"\n"${transaction.clientName}","${transaction.clearingAgentName}","${transaction.itemType}","${transaction.billNumber}","${transaction.shippingAgency}","${new Date(transaction.date).toLocaleDateString()}","${transaction.totalExpenses}","${transaction.totalBalance}","${transaction.totalBalance - transaction.totalExpenses}","${transaction.expenses.map(exp => `${exp.note}: ${exp.amount}`).join(' | ')}"`;
+            
+            const link = document.createElement("a");
+            link.setAttribute("href", csvContent);
+            link.setAttribute("download", `transaction-${transaction.clientName}-${transaction.billNumber}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function exportAllData() {
+            if (filteredTransactions.length === 0) {
+                alert('لا توجد بيانات لتصديرها');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+            
+            const headers = [
+                'اسم العميل', 'اسم المستخلص', 'الصنف', 'رقم البوليصة',
+                'التوكيل الملاحي', 'التاريخ', 'إجمالي المصروفات', 'إجمالي الرصيد', 'الباقي',
+                'المصروفات التفصيلية', 'تاريخ الإنشاء'
+            ];
+            csvContent += headers.join(',') + '\n';
+
+            filteredTransactions.forEach(transaction => {
+                const detailedExpenses = transaction.expenses.map(exp => `${exp.note}: ${exp.amount}`).join(' | ');
+                const remainingBalance = transaction.totalBalance - transaction.totalExpenses;
+                
+                const row = [
+                    `"${transaction.clientName}"`, `"${transaction.clearingAgentName}"`, `"${transaction.itemType}"`, `"${transaction.billNumber}"`,
+                    `"${transaction.shippingAgency}"`, `"${new Date(transaction.date).toLocaleDateString()}"`, transaction.totalExpenses,
+                    transaction.totalBalance, remainingBalance, `"${detailedExpenses}"`, `"${new Date(transaction.createdAt).toLocaleDateString()}"`
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `expenses-data-${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>

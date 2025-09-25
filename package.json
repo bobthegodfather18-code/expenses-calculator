@@ -1,0 +1,32 @@
+{
+  "name": "expenses-calculator",
+  "version": "1.0.0",
+  "description": "نظام متكامل لحساب وإدارة مصروفات الشحن البحري مع إمكانية الطباعة والتصدير",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "build": "echo 'No build process needed for static site'",
+    "deploy": "echo 'Ready for Netlify deployment'"
+  },
+  "keywords": [
+    "expenses",
+    "calculator",
+    "shipping",
+    "arabic",
+    "invoice",
+    "accounting"
+  ],
+  "author": "Expenses Calculator Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/expenses-calculator.git"
+  },
+  "homepage": "https://your-site-name.netlify.app",
+  "devDependencies": {
+    "serve": "^14.2.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
